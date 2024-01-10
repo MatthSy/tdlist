@@ -1,0 +1,4 @@
+task = "foo", state = "0", date = "01/01/2025"
+task = "bar", state = "0", date = "01/01/2025"
+task = "baz", state = "0", date = "02/01/2025"
+task = "bazé", state = "0", date = "02/01/2025"
