@@ -1,11 +1,31 @@
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Task {
-    id: String,
-    state: State,
-    date: String,
+    pub id: String,
+    pub state: State,
+    pub date: String,
 }
 
-enum State {
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum State {
     Todo,
     InProgress,
     Done,
+}
+
+#[derive(Debug)]
+pub enum ConversionError {
+    UnvalidArgForm,
+    BadLen
+}
+
+impl Task {
+    pub fn default() -> Task {
+        Task {
+            id: String::new(),
+            state: State::Todo,
+            date: String::new()
+        }
+    }
 }
