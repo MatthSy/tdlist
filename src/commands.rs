@@ -65,14 +65,10 @@ pub fn match_input_to_command(args: &Vec<String>) -> Result<Command, CommandErro
 impl Command {
     pub fn execute(&self) {
         match self.command {
-            CommandType::Add => {
-                command_add::add(&self.args);
-            }
+            CommandType::Add => command_add::add(&self.args),
             CommandType::Remove => {}
-            CommandType::Display => {
-                command_display::display();
-            }
-            CommandType::Edit => {}
+            CommandType::Display => command_display::display(),
+            CommandType::Edit => command_edit::edit(&self.args),
             CommandType::List => {}
             CommandType::Move => {}
         }
@@ -119,7 +115,7 @@ mod command_add {
         }
         match args[2].as_str() {
             "--date" | "-d" => args[3].to_string(),
-            _ => String::from("unvalid arg"),
+            _ => panic!("Unvalid Arg"),
         }
     }
 }
@@ -132,7 +128,7 @@ mod command_display {
     use crossterm::{ExecutableCommand, cursor, execute};
     use crossterm::terminal::{Clear, ClearType};
 
-    pub fn get_tasks() -> Vec<Task>{
+    pub fn get_tasks() -> Vec<Task> {
         const PATH: &str = "tdlist.txt";
         let mut file = File::open(PATH).unwrap();
         let mut buf = String::new();
@@ -156,28 +152,28 @@ mod command_display {
     pub fn display() {
         let mut stdout = stdout();
         stdout.execute(Clear(ClearType::All)).unwrap();
-        execute!(stdout, cursor::MoveTo(0, 0), cursor::Hide).unwrap();
+        execute!(stdout, cursor::MoveTo(0, 1), cursor::Hide).unwrap();
 
         let formatted_data = get_tasks();
-        print!("Date\t\tTask\t\tState\n");
-        print!("----\t\t----\t\t-----");
+
+        print!(" State  Task\t\t\t\tDate\n");
+        print!("-------|----\t\t\t\t----------");
         formatted_data.iter().for_each(|task| {
             let date = match task.date.as_str() {
                 "" => "None\t".to_string(),
                 _ => task.date.to_owned(),
             };
             execute!(stdout, cursor::MoveDown(1), cursor::MoveToColumn(0)).unwrap();
+            write!(stdout, "{}", task.state).unwrap();
+            stdout.execute(cursor::MoveToColumn(7)).unwrap();
+            write!(stdout, "|{}", task.id).unwrap();
+            stdout.execute(cursor::MoveToColumn(40)).unwrap();
             write!(stdout, "{}", date).unwrap();
-            stdout.execute(cursor::MoveToColumn(16)).unwrap();
-            write!(stdout, "{}", task.id).unwrap();
-            stdout.execute(cursor::MoveToColumn(32)).unwrap();
-            write!(stdout, "{:?}", task.state).unwrap();
         });
         println!("\n");
 
         stdout.execute(cursor::Show).unwrap();
     }
-
 
     /// Converti le Vec<&str> en un objet Task
     pub fn to_task(input: &Vec<&str>) -> Result<Task, ConversionError> {
@@ -196,7 +192,8 @@ mod command_display {
                         "ip" => State::InProgress,
                         "d" => State::Done,
                         _ => {
-                            return Err(ConversionError::UnvalidArgForm); }
+                            return Err(ConversionError::UnvalidArgForm);
+                        }
                     };
                 }
                 s if s.starts_with("date = \"") && s.ends_with("\"") => {
@@ -204,11 +201,134 @@ mod command_display {
                     task.date = date.to_string();
                 }
                 _ => {
-                    return Err(ConversionError::UnvalidArgForm); }
+                    return Err(ConversionError::UnvalidArgForm);
+                }
             }
         }
         Ok(task)
     }
 }
 
-mod command_edit {}
+pub mod command_edit {
+    use crate::commands::command_display::{get_tasks};
+
+    pub fn edit(args: &Vec<String>) {
+        match args[0].as_str() {
+            "--task" | "-t" => edit_task(&args[0..args.len()].to_owned()),
+            "--list" | "-l" => {}
+            _ => panic!("Unvalid arg"),
+        }
+    }
+
+    use std::fs::File;
+    use std::io;
+    use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
+    use std::path::Path;
+    use std::str::from_utf8;
+    use crate::commands::command_display;
+    use crate::tasks::State;
+
+    pub fn edit_task(args: &Vec<String>) {
+        if args.len() < 3 { panic!("\nToo few arguments\n") }
+
+        match args[2].as_str() {
+            "--name" | "-id" | "-n" => edit_task_name(&args),
+            "state" | "-s" => edit_task_state(&args),
+            _ => {}
+        }
+    }
+
+    pub fn edit_task_name(args: &Vec<String>) {
+        let line = search_for_task(args[1].as_str());
+        let mut file = File::options().write(true).read(true).open("./tdlist.txt").unwrap();
+
+        if line == 0 {
+            file.seek(SeekFrom::Start(get_nb_bytes_to_line(line))).unwrap();
+        } else {
+            file.seek(SeekFrom::Start(get_nb_bytes_to_line(line) + 1)).unwrap();
+        };
+
+        let task = &get_tasks()[line as usize];
+        let state = match task.state {
+            State::Todo => "td",
+            State::InProgress => "ip",
+            State::Done => "d"
+        };
+        file.write(format!("task = \"{}\", state = \"{}\", date = \"{}\"\n", args[3].as_str(), state, task.date).as_ref()).unwrap();
+        command_display::display();
+    }
+
+    pub fn edit_task_state(args: &Vec<String>) {
+        let line = search_for_task(args[1].as_str());
+        let mut file = File::options().write(true).read(true).open("./tdlist.txt").unwrap();
+        let offset = if line == 0 {
+            file.seek(SeekFrom::Start(get_nb_bytes_to_line(line))).unwrap()
+        } else {
+            file.seek(SeekFrom::Start(get_nb_bytes_to_line(line) + 1)).unwrap()
+        };
+
+        let task = &get_tasks()[line as usize];
+        let state = match args[3].to_lowercase().as_str() {
+            "todo" | "td" => "td",
+            "inprogress" | "ip" => "ip",
+            "done" | "d" => "d",
+            _ => panic!("Unvalid state argument")
+        };
+
+        // Obligé de faire des filouteries pour y arriver, j'y ai passé l'aprem
+        delete_line(line).unwrap();
+        file.seek(SeekFrom::Start(offset)).unwrap();
+        let buffer = &mut vec![];
+        file.read_to_end(buffer).unwrap();
+        file.seek(SeekFrom::Start(offset)).unwrap();
+
+        file.write(format!("task = \"{}\", state = \"{}\", date = \"{}\"{}", task.id, state, task.date, from_utf8(buffer).unwrap()).as_ref()).unwrap();
+        command_display::display();
+    }
+
+    pub fn get_nb_bytes_to_line(line: u16) -> u64 {
+        let mut file = File::options().append(true).read(true).open("./tdlist.txt").unwrap();
+        let max = file.seek(SeekFrom::End(0)).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        let mut line_cnt: u64 = 0;
+        let mut cnt: u64 = 0;
+        loop {
+            let mut buf = [0];
+            file.read_exact(&mut buf).unwrap();
+            if buf[0] == "\n".bytes().next().unwrap() { line_cnt += 1; }
+            if line_cnt == line as u64 { break; }
+            if file.seek(SeekFrom::Current(0)).unwrap() == max { return 0; }
+            cnt += 1;
+        }
+        return cnt;
+    }
+
+    pub fn search_for_task(id: &str) -> u16 {
+        let list = get_tasks();
+        for i in 0..list.len() {
+            if &list[i].id == &id.to_string() { return i as u16; }
+        }
+        panic!("Task not found")
+    }
+
+    pub fn delete_line(n_line: u16) -> io::Result<()> {
+        let filename = Path::new("./tdlist.txt");
+
+        let file = File::open(&filename)?;
+        let reader = BufReader::new(file);
+        let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();
+
+        let line_to_delete = lines.get(n_line as usize).ok_or(io::Error::from(io::ErrorKind::NotFound))?;
+
+        let mut file = File::create(&filename)?;
+        for line in &lines {
+            if line != line_to_delete {
+                writeln!(file, "{}", line)?;
+            } else {
+                write!(file, "\n")?;
+            }
+        }
+
+        Ok(())
+    }
+}
