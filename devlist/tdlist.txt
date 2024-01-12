@@ -1,3 +1,6 @@
 task = "foo", state = "td", date = "01/01/2025"
 task = "baz", state = "ip", date = "02/01/2025"
 task = "bar", state = "d", date = "02/01/2025"
+task = "sortir les voisins", state = "td", date = ""
+task = "dire bonjour aux poubelles", state = "ip", date = "21/09/2900"
+task = "push git", state = "td", date = "03/03/3000"
