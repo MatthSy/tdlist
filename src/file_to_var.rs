@@ -1,9 +1,9 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::io;
 use std::path::Path;
 use crate::command_display;
-use crate::tasks::Task;
+use crate::tasks::{self, Task};
 
 pub fn get_tasks() -> Vec<Task> {
     const PATH: &str = "tdlist.txt";
@@ -21,7 +21,11 @@ pub fn get_tasks() -> Vec<Task> {
     data.pop();
     let mut formatted_data: Vec<Task> = vec![];
     for i in 0..data.len() {
-        formatted_data.push(command_display::to_task(&data[i]).unwrap());
+        match command_display::to_task(&data[i]) {
+            Err(tasks::ConversionError::UnvalidArgForm) => panic!("Mauvaise forme d'arg en mémoire"),
+            Err(tasks::ConversionError::BadLen) => {}
+            Ok(tasks) => formatted_data.push(tasks)
+        };
     }
     formatted_data
 }
@@ -53,7 +57,6 @@ pub fn search_for_task(id: &str) -> u16 {
 
 pub fn delete_line(n_line: u16) -> io::Result<()> {
     let filename = Path::new("./tdlist.txt");
-
     let file = File::open(&filename)?;
     let reader = BufReader::new(file);
     let lines: Vec<String> = reader.lines().map(|line| line.unwrap()).collect();

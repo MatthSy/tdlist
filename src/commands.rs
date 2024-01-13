@@ -68,7 +68,7 @@ impl Command {
     pub fn execute(&self) {
         match self.command {
             CommandType::Add => command_add::add(&self.args),
-            CommandType::Remove => {}
+            CommandType::Remove => crate::command_remove::remove(&self.args),
             CommandType::Display => crate::command_display::display(),
             CommandType::Edit => crate::command_edit::edit(&self.args),
             CommandType::Help => {}

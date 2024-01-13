@@ -1,14 +1,14 @@
-use std::io::stdout;
+use std::io::{stdout, Write};
 use crossterm::terminal::{Clear, ClearType};
 use crossterm::{cursor, ExecutableCommand, execute};
 use crate::file_to_var;
 use crate::tasks::{ConversionError, State, Task};
 
+
 pub fn display() {
     let mut stdout = stdout();
     stdout.execute(Clear(ClearType::All)).unwrap();
     execute!(stdout, cursor::MoveTo(0, 1), cursor::Hide).unwrap();
-
     let formatted_data = file_to_var::get_tasks();
 
     print!(" State  Task\t\t\t\tDate\n");

@@ -4,6 +4,7 @@ mod command_display;
 mod command_edit;
 mod command_add;
 mod file_to_var;
+mod command_remove;
 
 use crate::commands::{display_args, match_input_to_command};
 use std::env;
