@@ -1,5 +1,7 @@
 task = "foo", state = "d", date = "01/01/2025"
-task = "bar", state = "ip", date = ""
+task = "bar", state = "d", date = ""
 task = "fooed", state = "ip", date = ""
-task = "gitpush", state = "td", date = ""
-task = "baz", state = "td", date = ""
+task = "baz", state = "ip", date = ""
+task = "courses", state = "d", date = "09/12/1201"
+task = "bonjour", state = "d", date = ""
+

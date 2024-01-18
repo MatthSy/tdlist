@@ -6,7 +6,10 @@ use crate::file_to_var::{delete_line, search_for_task};
 pub fn remove(args: &Vec<String>) {
     if args.len() != 1 { panic!("Wrong number of args in rm command") }
     delete_line(search_for_task(args[0].as_str())).unwrap();
+    remove_blank_lines();
+}
 
+pub fn remove_blank_lines() {
     let filename = Path::new("./tdlist.txt");
     let file = File::open(&filename).unwrap();
     let reader = BufReader::new(file);
@@ -14,9 +17,9 @@ pub fn remove(args: &Vec<String>) {
         reader
             .lines()
             .into_iter()
-            .inspect(|line| println!("1. {:?}", line))  // très pratique la méthode inspect()
+            // .inspect(|line| println!("1. {:?}", line))  // très pratique la méthode inspect()
             .filter(|line| line.as_ref().unwrap().ne(""))
-            .inspect(|line| println!("2. {:?}", line))
+            // .inspect(|line| println!("2. {:?}", line))
             .map(|line| { line.unwrap() })
             .collect();
 
